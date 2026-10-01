@@ -14,6 +14,7 @@ router.get("/", async (req, res) => {
       recentActivity,
       followUpsDue,
       industryBreakdown,
+      documentsExpiring,
     ] = await Promise.all([
       pool.query(
         `SELECT
@@ -52,6 +53,11 @@ router.get("/", async (req, res) => {
       pool.query(
         `SELECT industry, COUNT(*)::int AS count FROM customers WHERE industry IS NOT NULL GROUP BY industry`
       ),
+      pool.query(
+        `SELECT id, category, title, expiry_date FROM library_documents
+         WHERE expiry_date IS NOT NULL AND expiry_date <= (CURRENT_DATE + INTERVAL '30 days')
+         ORDER BY expiry_date ASC LIMIT 10`
+      ),
     ]);
 
     const byStage = { new: 0, qualifying: 0, quoted: 0, negotiating: 0, won: 0, lost: 0 };
@@ -86,6 +92,7 @@ router.get("/", async (req, res) => {
       recentActivity: recentActivity.rows,
       followUpsDue: followUpsDue.rows,
       industryCounts,
+      documentsExpiring: documentsExpiring.rows,
     });
   } catch (err) {
     console.error("Dashboard error:", err.message);
